@@ -16,7 +16,9 @@ public class MovementDemo : ModuleRules
             "InputCore",
             "UMG",
             "Slate",
-            "SlateCore"
+            "SlateCore",
+            "MotionWarping",
+            "AnimGraphRuntime"
        });
 
         PrivateDependencyModuleNames.AddRange(new string[]

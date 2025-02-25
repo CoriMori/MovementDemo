@@ -13,6 +13,7 @@
  * Ability system component lives on the Player State Base
  */
 class UCurveFloat;
+class UMotionWarpingComponent;
 UCLASS()
 class MOVEMENTDEMO_API APlayerBase : public ACharacterBase
 {
@@ -24,6 +25,8 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 
 protected:
 	// Called when the game starts or when spawned
@@ -62,6 +65,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FollowCamera;
 
+	/** Motion Warping Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Advanced Movement|Vault", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -82,18 +89,17 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> CrouchAction;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Advanced Movement|Crouch", meta = (AllowPrivateAccess = "true"))
 	float DefaultTargetArmLength = 400.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Advanced Movement|Crouch", meta = (AllowPrivateAccess = "true"))
 	float CrouchedTargetArmLength = 550.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Advanced Movement|Crouch", meta = (AllowPrivateAccess = "true"))
 	float CameraTransitionDuration = 0.5f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Advanced Movement|Crouch", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCurveFloat> CrouchCameraCurve;
 
 	FTimeline CrouchCameraTimeline;
-
 };

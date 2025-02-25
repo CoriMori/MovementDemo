@@ -16,8 +16,7 @@
 #include "AbilitySystem/AbilitySystemComponentBase.h"
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
 #include "AbilitySystem/AbilitySystemUtilityLibrary.h"
-#include "Engine/DecalActor.h"
-#include "Components/DecalComponent.h"
+#include "MotionWarpingComponent.h"
 
 APlayerBase::APlayerBase()
 {
@@ -55,6 +54,9 @@ APlayerBase::APlayerBase()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	// Create the Motion Warping Component->Actor Component so no need to setup attachment
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 }
 
 void APlayerBase::BeginPlay()

@@ -21,6 +21,7 @@
 
 APlayerBase::APlayerBase()
 {
+	PrimaryActorTick.bCanEverTick = true; //enable tick on this character -> required for timelines
 	SetReplicates(true); //set the replication status of this class -> disable for single player games
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -41,10 +42,13 @@ APlayerBase::APlayerBase()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
+	// Set up crouching values
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
+	CameraBoom->SetupAttachment(GetMesh());
+	CameraBoom->TargetArmLength = DefaultTargetArmLength; // The camera follows at this distance behind the character	
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
 
 	// Create a follow camera
@@ -64,6 +68,11 @@ void APlayerBase::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	FOnTimelineFloat ProgressUpdate;
+	ProgressUpdate.BindUFunction(this, FName("TransitionCamera"));
+
+	CrouchCameraTimeline.AddInterpFloat(CrouchCameraCurve, ProgressUpdate);
 }
 
 void APlayerBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -80,6 +89,10 @@ void APlayerBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerBase::Look);
+
+		//Crouching
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &APlayerBase::ToggleCrouch);
+
 	}
 	else {
 		UE_LOG(LogTemp, Error, TEXT("Missing Enhanced Input Component"));
@@ -120,6 +133,29 @@ void APlayerBase::Look(const FInputActionValue& Value)
 	}
 }
 
+void APlayerBase::ToggleCrouch()
+{
+	CrouchCameraTimeline.PlayFromStart();
+	if (bIsCrouched) {
+		UnCrouch();
+		return;
+	}
+
+	Crouch();
+}
+
+void APlayerBase::TransitionCamera(float Alpha)
+{
+	float CurrentArmLength = CameraBoom->TargetArmLength;
+	float TargetLength = DefaultTargetArmLength;
+	if (bIsCrouched) {
+		TargetLength = CrouchedTargetArmLength;
+	}
+	float Speed = (CurrentArmLength - TargetLength) * CameraTransitionDuration;
+	
+	CameraBoom->TargetArmLength = FMath::FInterpConstantTo(CurrentArmLength, TargetLength, Alpha, Speed);
+}
+
 void APlayerBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -145,5 +181,12 @@ void APlayerBase::OnRep_PlayerState()
 		//set up reference and init data -> client
 		ASC->InitializeAbilitySystemData(AbilitySystemInitData, this, this);
 	}
+}
+
+void APlayerBase::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	CrouchCameraTimeline.TickTimeline(DeltaTime);
 }
 

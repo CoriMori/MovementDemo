@@ -5,12 +5,14 @@
 #include "CoreMinimal.h"
 #include "CharacterBase.h"
 #include "GameplayEffectTypes.h"
+#include "Components/TimelineComponent.h"
 #include "PlayerBase.generated.h"
 
 /**
  * Base class for client controlled characters that need to implement GAS
  * Ability system component lives on the Player State Base
  */
+class UCurveFloat;
 UCLASS()
 class MOVEMENTDEMO_API APlayerBase : public ACharacterBase
 {
@@ -36,11 +38,19 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
+	// Toggle Crouching
+	void ToggleCrouch();
+
+	UFUNCTION()
+	void TransitionCamera(float Alpha);
+
 	//Called on Server
 	virtual void PossessedBy(AController* NewController) override;
 
 	//Called on Client
 	virtual void OnRep_PlayerState() override;
+
+	virtual void Tick(float DeltaTime) override;
 
 private:
 
@@ -67,4 +77,23 @@ private:
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> LookAction;
+
+	/** Crouch Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> CrouchAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	float DefaultTargetArmLength = 400.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	float CrouchedTargetArmLength = 550.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	float CameraTransitionDuration = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCurveFloat> CrouchCameraCurve;
+
+	FTimeline CrouchCameraTimeline;
+
 };

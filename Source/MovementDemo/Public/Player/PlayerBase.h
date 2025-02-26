@@ -28,6 +28,8 @@ public:
 
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 
+	FVector2D GetMovementVector() const { return MovementVector; }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -102,4 +104,6 @@ private:
 	TObjectPtr<UCurveFloat> CrouchCameraCurve;
 
 	FTimeline CrouchCameraTimeline;
+
+	FVector2D MovementVector;
 };

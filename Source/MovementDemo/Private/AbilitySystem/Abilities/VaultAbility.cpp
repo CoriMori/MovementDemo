@@ -8,16 +8,22 @@
 
 UVaultAbility::UVaultAbility()
 {
+	EGameplayAbilityReplicationPolicy::ReplicateYes; //allows RPCs to fire on this ability
 }
 
 void UVaultAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	Vault();
+	Vault(ActorInfo);
 }
 
-void UVaultAbility::Vault()
+void UVaultAbility::Vault(const FGameplayAbilityActorInfo* ActorInfo)
 {
-	APlayerBase* Player = Cast<APlayerBase>(GetAvatarCharacter());
+	APlayerBase* Player = Cast<APlayerBase>(ActorInfo->OwnerActor); // access player for motion warping component
+	if (!Player) {
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
 	TArray<FVector> VaultingPath = TraceVaultPath();
 
 	//check if the landing location is within vaulting range
@@ -30,9 +36,10 @@ void UVaultAbility::Vault()
 		return;
 	}
 
+	//update player movement mode and collision->called on both client and server
 	Player->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	Player->SetActorEnableCollision(false);
-
+	
 	//set up the warping locations
 	FName TargetName = "VaultStart";
 	for (int32 I = 0; I < VaultingPath.Num(); I++) {
@@ -40,23 +47,36 @@ void UVaultAbility::Vault()
 		else TargetName = "VaultEnd";
 		Player->GetMotionWarpingComponent()->AddOrUpdateWarpTargetFromLocationAndRotation(TargetName, VaultingPath[I], Player->GetActorRotation());
 	}
-	//play the animation montage
+
+	//play the animation montage -> only called on owning client / server
 	UPlayMontageAndWaitForEvent* MontageTask = UPlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(this, NAME_None, VaultAnimation, FGameplayTagContainer(), 1.0f, NAME_None, false, 1.0f);
 	MontageTask->OnCompleted.AddDynamic(this, &UVaultAbility::OnCompleted);
 
 	MontageTask->ReadyForActivation();
 }
 
+/*
+* Handle Vault End only gets called on the owning client/server due to the task event.
+* So when a client activates the ability, this function only runs for the client.
+*/
+
 void UVaultAbility::HandleVaultEnd()
 {
-	APlayerBase* Player = Cast<APlayerBase>(GetAvatarCharacter());
-	Player->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
-	Player->SetActorEnableCollision(true);
+	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	GetAvatarCharacter()->SetActorEnableCollision(true);
+	if (!GetAvatarCharacter()->HasAuthority()) UpdateServer();
+
 	bCanWarp = false;
 	LandingLocation = FVector(0.0f, 0.0f, 20000.0f);
 }
 
-void UVaultAbility::OnCancelled(FGameplayTag EventTag, FGameplayEventData EventData)
+void UVaultAbility::UpdateServer_Implementation()
+{
+	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	GetAvatarCharacter()->SetActorEnableCollision(true);
+}
+
+void UVaultAbility::OnCancelled(FGameplayTag EventTag, FGameplayEventData EventData) 
 {
 	HandleVaultEnd();
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
@@ -104,8 +124,15 @@ TArray<FVector> UVaultAbility::TraceVaultPath()
 
 		FHitResult DownwardTraceResult;
 		FCollisionShape SphereTrace = FCollisionShape::MakeSphere(10.0f);
-		bool bHitDetected = World->SweepSingleByChannel(DownwardTraceResult, StartLocation, EndLocation, FQuat::Identity, ECC_Visibility, SphereTrace);
+		bool bHitDetected = World->SweepSingleByChannel(DownwardTraceResult, StartLocation, EndLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, SphereTrace);
 
+		//prevent vaulting through stacked objects
+		if (DownwardTraceResult.bStartPenetrating) {
+			bCanWarp = false;
+			LandingLocation = FVector(0.0f, 0.0f, 20000.0f);
+			return VaultingPath;
+		}
+		
 		if (bHitDetected) {
 			if (I == 0) {
 				VaultingPath.Push(DownwardTraceResult.Location); //add the vault starting point
@@ -114,6 +141,7 @@ TArray<FVector> UVaultAbility::TraceVaultPath()
 			else {
 				VaultingPath.Push(DownwardTraceResult.Location); //add the vault middle points
 				bCanWarp = true; //let the system know that we are cleard to attempt the warp ->can be buggy without this
+				//DrawDebugSphere(GetWorld(), DownwardTraceResult.Location, 10.0f, 16, FColor::Yellow, false, 10.0f);
 			}
 
 		}
@@ -122,11 +150,12 @@ TArray<FVector> UVaultAbility::TraceVaultPath()
 
 			FVector LandingStartLocation = DownwardTraceResult.TraceStart + (GetAvatarCharacter()->GetActorForwardVector() * 80); //80 is a hardcoded landing distance -> will convert to variable
 			FVector LandingEndLocation = LandingStartLocation - FVector(0.0f, 0.0f, 1000.0f);
-			bool bEndDetected = World->LineTraceSingleByChannel(LandingTraceResult, LandingStartLocation, LandingEndLocation, ECC_Visibility);
+			bool bEndDetected = World->LineTraceSingleByChannel(LandingTraceResult, LandingStartLocation, LandingEndLocation, ECollisionChannel::ECC_Visibility);
 
 			if (bEndDetected) {
 				LandingLocation = LandingTraceResult.Location;
 				VaultingPath.Push(LandingTraceResult.Location); //add the vault landing point
+				//DrawDebugSphere(GetWorld(), LandingTraceResult.Location, 10.0f, 16, FColor::Blue, false, 10.0f);
 				break;
 			}
 		}

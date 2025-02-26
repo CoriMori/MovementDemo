@@ -104,7 +104,7 @@ void APlayerBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void APlayerBase::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
-	FVector2D MovementVector = Value.Get<FVector2D>();
+	MovementVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr){
 		// find out which way is forward
@@ -191,4 +191,5 @@ void APlayerBase::Tick(float DeltaTime)
 
 	CrouchCameraTimeline.TickTimeline(DeltaTime);
 }
+
 

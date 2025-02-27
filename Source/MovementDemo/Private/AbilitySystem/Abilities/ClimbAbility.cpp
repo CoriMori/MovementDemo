@@ -7,16 +7,29 @@
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/PlayerBase.h"
+#include "AbilitySystemComponent.h"
 
 UClimbAbility::UClimbAbility()
 {
-
+	EGameplayAbilityReplicationPolicy::ReplicateYes; //allows RPCs to fire on this ability
 }
 
 void UClimbAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	AttachToWall();
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	Climb();
+}
+
+void UClimbAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	EndClimb();
+}
+
+void UClimbAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
+{
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+	EndClimb();
 }
 
 
@@ -26,26 +39,43 @@ void UClimbAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, cons
 	
 	GetAvatarCharacter()->GetCharacterMovement()->MaxFlySpeed = ClimbSpeed;
 	GetAvatarCharacter()->GetCharacterMovement()->BrakingDecelerationFlying = ClimbBreak;
+
+	FOnTimelineFloat ProgressUpdate;
+	ProgressUpdate.BindUFunction(this, FName("SmoothClimbRotation"));
+
+	ClimbRotationTimeline.AddInterpFloat(ClimbRoationCurve, ProgressUpdate);
+	ClimbRotationTimeline.SetLooping(true);
 }
 
 void UClimbAbility::Climb()
 {
+	AttachToWall();
 	APlayerBase* Player = Cast<APlayerBase>(GetAvatarCharacter());
 	FHitResult TraceResult;
 	bool bHitDetected = ClimbTrace(TraceResult, ClimbTraceDistance + 20);
-	if (!bHitDetected) return;
+	if (!bHitDetected) {
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	//add timeline to smooth out alignment
+	UAbilityTaskOnTick* Task = UAbilityTaskOnTick::AbilityTaskOnTick(this, NAME_None);
+	Task->OnTick.AddDynamic(this, &UClimbAbility::OnTick);
 
-	//FVector2D ClimbDirection = Player->GetMovementVector();
-	//float ScaleValue = 1.0f;
-	//Player->AddMovementInput(ClimbDirection, ScaleValue);
+	Task->ReadyForActivation();
+	//handle climbing rotation
+	ClimbRotationTimeline.PlayFromStart();
 
+	//ability will be canceled via another ability so no need to end
 }
 
 void UClimbAbility::AttachToWall()
 {
 	FHitResult TraceResult;
 	bool bHitDetected = ClimbTrace(TraceResult, ClimbTraceDistance);
-	if (!bHitDetected) return;
+	if (!bHitDetected) {
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
 	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	GetAvatarCharacter()->GetCharacterMovement()->bOrientRotationToMovement = false;
 
@@ -61,6 +91,34 @@ bool UClimbAbility::ClimbTrace(FHitResult& OutResult, float TraceDistance)
 	const UWorld* World = GetWorld();
 	FVector StartLocation = GetAvatarCharacter()->GetActorLocation();
 	FVector EndLocation = StartLocation + (GetAvatarCharacter()->GetActorForwardVector() * TraceDistance);
+	//DrawDebugLine(World, StartLocation, EndLocation, FColor::Red, false, 1.0f);
 	return World->LineTraceSingleByChannel(OutResult, StartLocation, EndLocation, ECollisionChannel::ECC_Visibility);
+}
+
+void UClimbAbility::OnTick(float DeltaTime)
+{
+	AttachToWall();
+	ClimbRotationTimeline.TickTimeline(DeltaTime);
+}
+
+void UClimbAbility::SmoothClimbRotation(float Alpha)
+{
+	FHitResult TraceResult;
+	bool bHitDetected = ClimbTrace(TraceResult, ClimbTraceDistance + 20);
+	if (!bHitDetected) return;
+	GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("Rotating"));
+
+	FRotator TargetRotation = FRotationMatrix::MakeFromX(TraceResult.Normal * -1.0f).Rotator();
+	FRotator CurrentRotation = GetAvatarCharacter()->GetActorRotation();
+
+	FRotator NewClimbRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, Alpha, 1.0f);
+	GetAvatarCharacter()->SetActorRotation(NewClimbRotation);
+}
+
+//called when ability is cancelled
+void UClimbAbility::EndClimb()
+{
+	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	GetAvatarCharacter()->GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 

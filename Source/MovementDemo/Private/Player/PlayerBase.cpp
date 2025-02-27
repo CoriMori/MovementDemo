@@ -106,7 +106,15 @@ void APlayerBase::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	MovementVector = Value.Get<FVector2D>();
 
+	//
 	if (Controller != nullptr){
+		if (!GetAbilitySystemComponent()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Vaulting"))) && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) {
+			//handled in climb ability
+			AddMovementInput(GetActorRightVector(), MovementVector.X);
+			AddMovementInput(GetActorUpVector(), MovementVector.Y);
+			return;
+		}
+
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -191,5 +199,6 @@ void APlayerBase::Tick(float DeltaTime)
 
 	CrouchCameraTimeline.TickTimeline(DeltaTime);
 }
+
 
 

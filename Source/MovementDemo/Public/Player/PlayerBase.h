@@ -56,7 +56,6 @@ protected:
 	virtual void OnRep_PlayerState() override;
 
 	virtual void Tick(float DeltaTime) override;
-
 private:
 
 	/** Camera boom positioning the camera behind the character */

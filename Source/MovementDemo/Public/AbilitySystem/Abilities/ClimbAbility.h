@@ -6,6 +6,7 @@
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
 #include "AbilitySystem/AbilityTaskOnTick.h"
 #include "Components/TimelineComponent.h"
+#include "Player/PlayerBase.h"
 #include "ClimbAbility.generated.h"
 
 /**
@@ -59,5 +60,4 @@ private:
 	TObjectPtr<UCurveFloat> ClimbRoationCurve;
 
 	FTimeline ClimbRotationTimeline;
-
 };

@@ -2,7 +2,7 @@
 
 
 #include "AbilitySystem/Abilities/ClimbAbility.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "PlayerMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -45,12 +45,15 @@ void UClimbAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, cons
 
 	ClimbRotationTimeline.AddInterpFloat(ClimbRoationCurve, ProgressUpdate);
 	ClimbRotationTimeline.SetLooping(true);
+
+	float MinTimeRange;
+	float MaxTimeRange;
+	ClimbRoationCurve->GetTimeRange(MinTimeRange, MaxTimeRange);
 }
 
 void UClimbAbility::Climb()
 {
 	AttachToWall();
-	APlayerBase* Player = Cast<APlayerBase>(GetAvatarCharacter());
 	FHitResult TraceResult;
 	bool bHitDetected = ClimbTrace(TraceResult, ClimbTraceDistance + 20);
 	if (!bHitDetected) {
@@ -76,7 +79,7 @@ void UClimbAbility::AttachToWall()
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
-	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Custom, ECustomMovementMode::MOVE_Climb);
 	GetAvatarCharacter()->GetCharacterMovement()->bOrientRotationToMovement = false;
 
 	FVector AttachmentLocation = (GetAvatarCharacter()->GetCapsuleComponent()->GetScaledCapsuleRadius() * TraceResult.Normal) + TraceResult.Location;
@@ -91,8 +94,8 @@ bool UClimbAbility::ClimbTrace(FHitResult& OutResult, float TraceDistance)
 	const UWorld* World = GetWorld();
 	FVector StartLocation = GetAvatarCharacter()->GetActorLocation();
 	FVector EndLocation = StartLocation + (GetAvatarCharacter()->GetActorForwardVector() * TraceDistance);
-	//DrawDebugLine(World, StartLocation, EndLocation, FColor::Red, false, 1.0f);
-	return World->LineTraceSingleByChannel(OutResult, StartLocation, EndLocation, ECollisionChannel::ECC_Visibility);
+	//DrawDebugLine(World, StartLocation, EndLocation, FColor::Red, false, 0.0f);
+	return World->LineTraceSingleByChannel(OutResult, StartLocation, EndLocation, ECollisionChannel::ECC_GameTraceChannel1);
 }
 
 void UClimbAbility::OnTick(float DeltaTime)
@@ -104,14 +107,14 @@ void UClimbAbility::OnTick(float DeltaTime)
 void UClimbAbility::SmoothClimbRotation(float Alpha)
 {
 	FHitResult TraceResult;
-	bool bHitDetected = ClimbTrace(TraceResult, ClimbTraceDistance + 20);
+	bool bHitDetected = ClimbTrace(TraceResult, ClimbTraceDistance + 50);
 	if (!bHitDetected) return;
-	GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("Rotating"));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("Rotating"));
 
 	FRotator TargetRotation = FRotationMatrix::MakeFromX(TraceResult.Normal * -1.0f).Rotator();
 	FRotator CurrentRotation = GetAvatarCharacter()->GetActorRotation();
 
-	FRotator NewClimbRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, Alpha, 1.0f);
+	FRotator NewClimbRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, Alpha, 0.1f);
 	GetAvatarCharacter()->SetActorRotation(NewClimbRotation);
 }
 

@@ -5,7 +5,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "PlayerMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
@@ -18,31 +18,18 @@
 #include "AbilitySystem/AbilitySystemUtilityLibrary.h"
 #include "MotionWarpingComponent.h"
 
-APlayerBase::APlayerBase()
+APlayerBase::APlayerBase(const FObjectInitializer& ObjectInitializer) 
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UPlayerMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true; //enable tick on this character -> required for timelines
 	SetReplicates(true); //set the replication status of this class -> disable for single player games
 	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+	GetCapsuleComponent()->InitCapsuleSize(35.f, 90.0f);
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
-
-	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
-
-	GetCharacterMovement()->JumpZVelocity = 700.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
-	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
-
-	// Set up crouching values
-	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -57,6 +44,12 @@ APlayerBase::APlayerBase()
 
 	// Create the Motion Warping Component->Actor Component so no need to setup attachment
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+}
+
+void APlayerBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	PlayerMovementComponent = Cast<UPlayerMovementComponent>(Super::GetMovementComponent());
 }
 
 void APlayerBase::BeginPlay()
@@ -108,26 +101,29 @@ void APlayerBase::Move(const FInputActionValue& Value)
 
 	//
 	if (Controller != nullptr){
-		if (!GetAbilitySystemComponent()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Vaulting"))) && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) {
-			//handled in climb ability
-			AddMovementInput(GetActorRightVector(), MovementVector.X);
-			AddMovementInput(GetActorUpVector(), MovementVector.Y);
-			return;
+		switch (GetCharacterMovement()->MovementMode)
+		{
+			case EMovementMode::MOVE_Custom:
+				HandleCustomMovement(MovementVector);
+				break;
+
+			default:
+				//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Purple, TEXT("Default Movement"));
+				// find out which way is forward
+				const FRotator Rotation = Controller->GetControlRotation();
+				const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+				// get forward vector
+				const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+
+				// get right vector 
+				const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+				// add movement 
+				AddMovementInput(ForwardDirection, MovementVector.Y);
+				AddMovementInput(RightDirection, MovementVector.X);
+				break;
 		}
-
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
 
@@ -198,6 +194,20 @@ void APlayerBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	CrouchCameraTimeline.TickTimeline(DeltaTime);
+}
+
+void APlayerBase::HandleCustomMovement(FVector2D InputMovementVector)
+{
+	switch (GetCharacterMovement()->CustomMovementMode)
+	{
+		case ECustomMovementMode::MOVE_Climb:
+			//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, TEXT("Climb Movement"));
+			AddMovementInput(GetActorRightVector(), InputMovementVector.X);
+			AddMovementInput(GetActorUpVector(), InputMovementVector.Y);
+			break;
+		default:
+			break;
+	}
 }
 
 

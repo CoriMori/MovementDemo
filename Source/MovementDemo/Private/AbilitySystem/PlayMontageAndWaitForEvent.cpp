@@ -219,7 +219,6 @@ bool UPlayMontageAndWaitForEvent::StopPlayingMontage()
 			return true;
 		}
 	}
-
 	return false;
 }
 

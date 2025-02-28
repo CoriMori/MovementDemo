@@ -1,0 +1,84 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "PlayerMovementComponent.h"
+#include "GameFramework/PhysicsVolume.h"
+
+DEFINE_LOG_CATEGORY(LogCharacterMovement);
+
+UPlayerMovementComponent::UPlayerMovementComponent()
+{
+	bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
+
+	JumpZVelocity = 700.f;
+	AirControl = 0.35f;
+	MaxWalkSpeed = 500.f;
+	MinAnalogWalkSpeed = 20.f;
+	BrakingDecelerationWalking = 2000.f;
+	BrakingDecelerationFalling = 1500.0f;
+
+	// Set up crouching values
+	GetNavAgentPropertiesRef().bCanCrouch = true;
+}
+
+float UPlayerMovementComponent::GetLeanDirection(float DeltaTime, float YawDelta, float LeanAmount, float LeanSpeed)
+{
+	LastFrameRotation = GetOwner()->GetActorRotation();
+	FRotator Delta = LastFrameRotation - GetOwner()->GetActorRotation();
+	Delta.Normalize();
+	float TargetLeanDirection = (Delta.Yaw / DeltaTime) / LeanAmount;
+	return FMath::FInterpTo(YawDelta, TargetLeanDirection, DeltaTime, LeanSpeed);
+}
+
+void UPlayerMovementComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+	ComponentOwner = GetOwner();
+}
+
+void UPlayerMovementComponent::PhysCustom(float DeltaTime, int32 Iterations)
+{
+	Super::PhysCustom(DeltaTime, Iterations);
+	switch (CustomMovementMode)
+	{
+	case ECustomMovementMode::MOVE_Climb:
+		bIsClimbing = true;
+		MaxCustomMovementSpeed = MaxFlySpeed;
+		PhysFlying(DeltaTime, Iterations);
+		break;
+	default:
+		bIsClimbing = false;
+		UE_LOG(LogCharacterMovement, Error, TEXT("Invalid Movement Mode"));
+		break;
+	}
+}
+
+float UPlayerMovementComponent::GetMaxBrakingDeceleration() const
+{
+	Super::GetMaxBrakingDeceleration();
+	switch (MovementMode)
+	{
+	case MOVE_Custom:
+		return GetCustomMaxBrakingDeceleration();
+	default:
+		return 0.0f;
+	}
+}
+
+void UPlayerMovementComponent::SetMovementMode(EMovementMode NewMovementMode, uint8 NewCustomMode)
+{
+	Super::SetMovementMode(NewMovementMode, NewCustomMode);
+	bIsClimbing = false;
+}
+
+float UPlayerMovementComponent::GetCustomMaxBrakingDeceleration() const
+{
+	switch (CustomMovementMode)
+	{
+	case ECustomMovementMode::MOVE_Climb:
+		return BrakingDecelerationFlying;
+	default:
+		return 0.0f;
+	}
+}

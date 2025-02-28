@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Player/PlayerBase.h"
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
 #include "AbilitySystem/PlayMontageAndWaitForEvent.h"
 #include "VaultAbility.generated.h"
@@ -21,6 +22,9 @@ public:
 	/** Actually activate ability, do not call this directly. Called by the GameplayAbilityBase */
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 protected:
+	// runs when ability is first intitalized
+	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+
 	// Vault the player
 	void Vault(const FGameplayAbilityActorInfo* ActorInfo);
 
@@ -51,5 +55,7 @@ private:
 	bool bCanWarp = false;
 
 	FVector LandingLocation = FVector(0.0f, 0.0f, 20000.0f);
+
+	TObjectPtr<APlayerBase> OwningPlayer;
 
 };

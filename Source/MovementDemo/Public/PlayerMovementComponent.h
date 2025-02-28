@@ -1,0 +1,61 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "PlayerMovementComponent.generated.h"
+
+/**
+ * 
+ */
+DECLARE_LOG_CATEGORY_EXTERN(LogCharacterMovement, Log, All);
+
+UCLASS()
+class MOVEMENTDEMO_API UPlayerMovementComponent : public UCharacterMovementComponent
+{
+	GENERATED_BODY()
+public:
+	UPlayerMovementComponent();
+	UFUNCTION(BlueprintPure)
+	float GetSpeed() const { return Velocity.Length(); }
+
+	UFUNCTION(BlueprintPure)
+	FVector GetVelocity() const { return Velocity; }
+	
+	UFUNCTION(BlueprintPure)
+	float GetLeanDirection(float DeltaTime, float YawDelta, float LeanAmount = 30.0f, float LeanSpeed = 5.0f);
+	
+	UFUNCTION(BlueprintPure)
+	FRotator GetLastFrameRotation() const { return LastFrameRotation; }
+	
+	UFUNCTION(BlueprintPure)
+	bool GetIsClimbing() const { return bIsClimbing; }
+
+	UFUNCTION(BlueprintPure)
+	bool GetIsWarping() const { return bIsWarping; }
+
+	void SetIsWarping(bool bWarping) { bIsWarping = bWarping; }
+
+protected:
+	virtual void InitializeComponent() override;
+	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
+	virtual float GetMaxBrakingDeceleration() const override;
+	virtual void SetMovementMode(EMovementMode NewMovementMode, uint8 NewCustomMode = 0) override;
+	float GetCustomMaxBrakingDeceleration() const;
+private:
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> ComponentOwner;
+
+	FRotator LastFrameRotation;
+
+	bool bIsClimbing = false;
+
+	bool bIsWarping = false;
+};
+
+UENUM(BlueprintType)
+enum ECustomMovementMode : uint8
+{
+	MOVE_Climb UMETA(DisplayName = "Climbing"),
+};

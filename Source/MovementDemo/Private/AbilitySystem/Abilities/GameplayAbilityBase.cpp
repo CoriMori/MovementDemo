@@ -72,7 +72,7 @@ void UGameplayAbilityBase::SetupEnhancedInputBindings(const FGameplayAbilityActo
 				if (InputTypeTrigger != ETriggerEvent::None) {
 					InputComponent->BindAction(
 						AbilityInstance->ActivationInputAction, 
-						AbilityInstance->InputTypeTrigger, 
+						AbilityInstance->InputTypeReleased, 
 						AbilityInstance, 
 						&ThisClass::HandleInputReleased, 
 						ActorInfo, 
@@ -159,3 +159,5 @@ UEnhancedInputComponent* UGameplayAbilityBase::GetAvatarInputComponent(const FGa
 
 	return Cast<UEnhancedInputComponent>(PawnController->InputComponent.Get());
 }
+
+

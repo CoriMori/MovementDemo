@@ -20,7 +20,7 @@ class MOVEMENTDEMO_API ACharacterBase : public ACharacter, public IAbilitySystem
 	GENERATED_BODY()
 
 public:
-	ACharacterBase();
+	explicit ACharacterBase(const FObjectInitializer& ObjectInitializer);
 
 	//Implement the IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;

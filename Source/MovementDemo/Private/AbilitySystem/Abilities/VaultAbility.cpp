@@ -2,8 +2,7 @@
 
 
 #include "AbilitySystem/Abilities/VaultAbility.h"
-#include "Player/PlayerBase.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "PlayerMovementComponent.h"
 #include "MotionWarpingComponent.h"
 
 UVaultAbility::UVaultAbility()
@@ -16,10 +15,17 @@ void UVaultAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 	Vault(ActorInfo);
 }
 
+void UVaultAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnAvatarSet(ActorInfo, Spec);
+	if (GetAvatarCharacter()) {
+		OwningPlayer = Cast<APlayerBase>(GetAvatarCharacter());
+	}
+}
+
 void UVaultAbility::Vault(const FGameplayAbilityActorInfo* ActorInfo)
 {
-	APlayerBase* Player = Cast<APlayerBase>(ActorInfo->OwnerActor); // access player for motion warping component
-	if (!Player) {
+	if (!OwningPlayer) {
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
@@ -27,8 +33,8 @@ void UVaultAbility::Vault(const FGameplayAbilityActorInfo* ActorInfo)
 	TArray<FVector> VaultingPath = TraceVaultPath();
 
 	//check if the landing location is within vaulting range
-	float LandingMin = Player->GetMesh()->GetComponentToWorld().GetLocation().Z - 50.0f;
-	float LandingMax = Player->GetMesh()->GetComponentToWorld().GetLocation().Z + 50.0f;
+	float LandingMin = GetAvatarCharacter()->GetMesh()->GetComponentToWorld().GetLocation().Z - 50.0f;
+	float LandingMax = GetAvatarCharacter()->GetMesh()->GetComponentToWorld().GetLocation().Z + 50.0f;
 	bool bCanLand = FMath::IsWithinInclusive(LandingLocation.Z, LandingMin, LandingMax);
 
 	if (!bCanWarp || !bCanLand || !VaultAnimation) {
@@ -37,15 +43,16 @@ void UVaultAbility::Vault(const FGameplayAbilityActorInfo* ActorInfo)
 	}
 
 	//update player movement mode and collision->called on both client and server
-	Player->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
-	Player->SetActorEnableCollision(false);
-	
+	OwningPlayer->GetPlayerMovement()->SetIsWarping(true);
+	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+	GetAvatarCharacter()->SetActorEnableCollision(false);
+
 	//set up the warping locations
 	FName TargetName = "VaultStart";
 	for (int32 I = 0; I < VaultingPath.Num(); I++) {
 		if (I < VaultingPath.Num() - 1) TargetName = "VaultMiddle";
 		else TargetName = "VaultEnd";
-		Player->GetMotionWarpingComponent()->AddOrUpdateWarpTargetFromLocationAndRotation(TargetName, VaultingPath[I], Player->GetActorRotation());
+		OwningPlayer->GetMotionWarpingComponent()->AddOrUpdateWarpTargetFromLocationAndRotation(TargetName, VaultingPath[I], OwningPlayer->GetActorRotation());
 	}
 
 	//play the animation montage -> only called on owning client / server
@@ -62,8 +69,10 @@ void UVaultAbility::Vault(const FGameplayAbilityActorInfo* ActorInfo)
 
 void UVaultAbility::HandleVaultEnd()
 {
+	OwningPlayer->GetPlayerMovement()->SetIsWarping(false);
 	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	GetAvatarCharacter()->SetActorEnableCollision(true);
+
 	if (!GetAvatarCharacter()->HasAuthority()) UpdateServer();
 
 	bCanWarp = false;
@@ -72,6 +81,7 @@ void UVaultAbility::HandleVaultEnd()
 
 void UVaultAbility::UpdateServer_Implementation()
 {
+	OwningPlayer->GetPlayerMovement()->SetIsWarping(false);
 	GetAvatarCharacter()->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	GetAvatarCharacter()->SetActorEnableCollision(true);
 }

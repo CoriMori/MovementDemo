@@ -2,8 +2,9 @@
 
 
 #include "Player/CharacterBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
-ACharacterBase::ACharacterBase()
+ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 {
 
 }

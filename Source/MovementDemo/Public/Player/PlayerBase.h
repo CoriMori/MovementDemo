@@ -19,16 +19,22 @@ class MOVEMENTDEMO_API APlayerBase : public ACharacterBase
 {
 	GENERATED_BODY()
 public:
-	APlayerBase();
+	explicit APlayerBase(const FObjectInitializer& ObjectInitializer);
 	
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
-
+	
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE class UPlayerMovementComponent* GetPlayerMovement() const { return PlayerMovementComponent; }
+	
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 
+	UFUNCTION(BlueprintCallable)
 	FVector2D GetMovementVector() const { return MovementVector; }
+
+	virtual void PostInitializeComponents() override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -56,6 +62,8 @@ protected:
 	virtual void OnRep_PlayerState() override;
 
 	virtual void Tick(float DeltaTime) override;
+
+	void HandleCustomMovement(FVector2D InputMovementVector);
 private:
 
 	/** Camera boom positioning the camera behind the character */
@@ -105,4 +113,7 @@ private:
 	FTimeline CrouchCameraTimeline;
 
 	FVector2D MovementVector;
+
+	TObjectPtr<UPlayerMovementComponent> PlayerMovementComponent;
 };
+

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/GameplayAbilityBase.h"
 #include "AbilitySystem/AbilityTaskOnTick.h"
+#include "AbilitySystem/PlayMontageAndWaitForEvent.h"
 #include "Components/TimelineComponent.h"
 #include "Player/PlayerBase.h"
 #include "ClimbAbility.generated.h"
@@ -33,6 +34,11 @@ protected:
 
 	void Climb();
 
+	void MantleLedge(FHitResult LedgeTraceResult);
+
+	void DetectLedge();
+	void DetectEdges();
+
 	void AttachToWall();
 
 	bool ClimbTrace(FHitResult& OutResult, float TraceDistance);
@@ -45,6 +51,9 @@ protected:
 	void SmoothClimbRotation(float Alpha);
 
 	void EndClimb();
+
+	UFUNCTION()
+	void OnMontageNotify(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointNotifyPayload);
 private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing", meta = (AllowPrivateAccess = "true"))
@@ -56,8 +65,19 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing", meta = (AllowPrivateAccess = "true"))
 	float ClimbTraceDistance = 100.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing|Ledge Climb", meta = (AllowPrivateAccess = "true"))
+	float EdgeTraceHeight = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing|Edge Rounding", meta = (AllowPrivateAccess = "true"))
+	float EdgeTrace = 50.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing|Ledge Climb", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> LedgeClimbAnimation;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCurveFloat> ClimbRoationCurve;
 
 	FTimeline ClimbRotationTimeline;
+
+	bool bClimbingLedge = false;
 };

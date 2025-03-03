@@ -201,7 +201,9 @@ void APlayerBase::HandleCustomMovement(FVector2D InputMovementVector)
 	switch (GetCharacterMovement()->CustomMovementMode)
 	{
 		case ECustomMovementMode::MOVE_Climb:
-			//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, TEXT("Climb Movement"));
+			if (GetPlayerMovement()->GetRightEdgeDetected() && InputMovementVector.X >= 1.0f || GetPlayerMovement()->GetLeftEdgeDetected() && InputMovementVector.X <= -1.0f) {
+				InputMovementVector.X = 0.0f;
+			}
 			AddMovementInput(GetActorRightVector(), InputMovementVector.X);
 			AddMovementInput(GetActorUpVector(), InputMovementVector.Y);
 			break;

@@ -37,6 +37,12 @@ public:
 
 	void SetIsWarping(bool bWarping) { bIsWarping = bWarping; }
 
+	bool GetRightEdgeDetected() const { return bRightEdgeDetected; }
+	bool GetLeftEdgeDetected() const { return bLeftEdgeDetected; }
+
+	void SetRightEdgeDetected(bool bEdgeDetected) { bRightEdgeDetected = bEdgeDetected; }
+	void SetLeftEdgeDetected(bool bEdgeDetected) { bLeftEdgeDetected = bEdgeDetected; }
+
 protected:
 	virtual void InitializeComponent() override;
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
@@ -51,6 +57,9 @@ private:
 
 	bool bIsClimbing = false;
 
+	bool bRightEdgeDetected = false;
+	bool bLeftEdgeDetected = false;
+
 	bool bIsWarping = false;
 };
 
@@ -58,4 +67,5 @@ UENUM(BlueprintType)
 enum ECustomMovementMode : uint8
 {
 	MOVE_Climb UMETA(DisplayName = "Climbing"),
+	MOVE_LedgeClimb UMETA(DisplayName = "Ledge Climbing"),
 };

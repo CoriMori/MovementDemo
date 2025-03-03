@@ -24,10 +24,11 @@ UPlayerMovementComponent::UPlayerMovementComponent()
 
 float UPlayerMovementComponent::GetLeanDirection(float DeltaTime, float YawDelta, float LeanAmount, float LeanSpeed)
 {
-	LastFrameRotation = GetOwner()->GetActorRotation();
 	FRotator Delta = LastFrameRotation - GetOwner()->GetActorRotation();
 	Delta.Normalize();
 	float TargetLeanDirection = (Delta.Yaw / DeltaTime) / LeanAmount;
+	float LeanInterp = FMath::FInterpTo(YawDelta, TargetLeanDirection, DeltaTime, LeanSpeed);
+	LastFrameRotation = GetOwner()->GetActorRotation();
 	return FMath::FInterpTo(YawDelta, TargetLeanDirection, DeltaTime, LeanSpeed);
 }
 
@@ -44,6 +45,11 @@ void UPlayerMovementComponent::PhysCustom(float DeltaTime, int32 Iterations)
 	{
 	case ECustomMovementMode::MOVE_Climb:
 		bIsClimbing = true;
+		MaxCustomMovementSpeed = MaxFlySpeed;
+		PhysFlying(DeltaTime, Iterations);
+		break;
+	case ECustomMovementMode::MOVE_LedgeClimb:
+		bIsClimbing = false;
 		MaxCustomMovementSpeed = MaxFlySpeed;
 		PhysFlying(DeltaTime, Iterations);
 		break;
@@ -76,6 +82,7 @@ float UPlayerMovementComponent::GetCustomMaxBrakingDeceleration() const
 {
 	switch (CustomMovementMode)
 	{
+	case ECustomMovementMode::MOVE_LedgeClimb:
 	case ECustomMovementMode::MOVE_Climb:
 		return BrakingDecelerationFlying;
 	default:

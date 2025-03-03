@@ -43,6 +43,9 @@ public:
 	void SetRightEdgeDetected(bool bEdgeDetected) { bRightEdgeDetected = bEdgeDetected; }
 	void SetLeftEdgeDetected(bool bEdgeDetected) { bLeftEdgeDetected = bEdgeDetected; }
 
+	UFUNCTION(BlueprintPure)
+	FQuat GetLookRotation(APawn* OwningPawn, ACharacter* Character);
+
 protected:
 	virtual void InitializeComponent() override;
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
@@ -54,6 +57,7 @@ private:
 	TObjectPtr<AActor> ComponentOwner;
 
 	FRotator LastFrameRotation;
+	FRotator SpineRotation;
 
 	bool bIsClimbing = false;
 

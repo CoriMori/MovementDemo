@@ -2,6 +2,8 @@
 
 
 #include "PlayerMovementComponent.h"
+#include "GameFramework/Character.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/PhysicsVolume.h"
 
 DEFINE_LOG_CATEGORY(LogCharacterMovement);
@@ -30,6 +32,29 @@ float UPlayerMovementComponent::GetLeanDirection(float DeltaTime, float YawDelta
 	float LeanInterp = FMath::FInterpTo(YawDelta, TargetLeanDirection, DeltaTime, LeanSpeed);
 	LastFrameRotation = GetOwner()->GetActorRotation();
 	return FMath::FInterpTo(YawDelta, TargetLeanDirection, DeltaTime, LeanSpeed);
+}
+
+FQuat UPlayerMovementComponent::GetLookRotation(APawn* OwningPawn, ACharacter* Character)
+{
+	if (!OwningPawn && !Character) return FQuat();
+	FRotator Delta = OwningPawn->GetControlRotation() - Character->GetCapsuleComponent()->GetComponentRotation();
+	Delta.Normalize();
+
+	Delta.Pitch = Delta.Pitch / -5.0f;
+	FMath::Clamp(Delta.Pitch, -20.0f, 20.0f);
+
+	Delta.Yaw = Delta.Yaw / -5.0f;
+	FMath::Clamp(Delta.Yaw, -20.0f, 20.0f);
+
+	Delta.Roll = Delta.Roll / -5.0f;
+	FMath::Clamp(Delta.Roll, -20.0f, 20.0f);
+
+	FRotator AdjustedDelta = FRotator(Delta.Roll, Delta.Yaw, Delta.Pitch); //Pitch and Roll swapped on purpose for bone movement
+	SpineRotation = FMath::RInterpTo(SpineRotation, AdjustedDelta, 1.0f, 0.1f);
+	FRotator AdjustedRotation = FRotator(SpineRotation.Pitch, SpineRotation.Roll, SpineRotation.Yaw); //Roll and Yaw swapped on purpose for bone movement
+	return AdjustedRotation.Quaternion();
+
+	return FQuat();
 }
 
 void UPlayerMovementComponent::InitializeComponent()

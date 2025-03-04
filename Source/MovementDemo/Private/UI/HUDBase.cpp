@@ -11,9 +11,11 @@ void AHUDBase::BeginPlay()
 
 	if (WidgetClass) {
 		Widget = CreateWidget<UWidgetBase>(GetWorld(), WidgetClass);
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Widgit Class Set"));
 
 		if (Widget) {
 			InitWidget();
+			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Widgit init"));
 		}
 	}
 }

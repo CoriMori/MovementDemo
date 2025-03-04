@@ -64,6 +64,7 @@ void APlayerBase::BeginPlay()
 		}
 	}
 
+	//crouch camera timeline setup
 	FOnTimelineFloat ProgressUpdate;
 	ProgressUpdate.BindUFunction(this, FName("TransitionCamera"));
 

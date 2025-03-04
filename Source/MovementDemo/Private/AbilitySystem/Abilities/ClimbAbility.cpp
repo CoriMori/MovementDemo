@@ -39,8 +39,11 @@ void UClimbAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, cons
 {
 	Super::OnAvatarSet(ActorInfo, Spec);
 	
-	GetAvatarCharacter()->GetCharacterMovement()->MaxFlySpeed = ClimbSpeed;
-	GetAvatarCharacter()->GetCharacterMovement()->BrakingDecelerationFlying = ClimbBreak;
+	if (GetAvatarCharacter()) {
+		GetAvatarCharacter()->GetCharacterMovement()->MaxFlySpeed = ClimbSpeed;
+		GetAvatarCharacter()->GetCharacterMovement()->BrakingDecelerationFlying = ClimbBreak;
+	}
+
 
 	FOnTimelineFloat ProgressUpdate;
 	ProgressUpdate.BindUFunction(this, FName("SmoothClimbRotation"));

@@ -11,7 +11,8 @@
 #include "ClimbAbility.generated.h"
 
 /**
- * 
+ * Custom gameplay ability to allow players to climb surfaces within the climable trace channel
+ * Multiplayer not currently supported -> need to work out variable replication so the animation blend space can work
  */
 class UCurveFloat;
 UCLASS()

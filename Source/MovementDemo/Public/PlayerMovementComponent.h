@@ -7,7 +7,7 @@
 #include "PlayerMovementComponent.generated.h"
 
 /**
- * 
+ * Custom player component to handle custom movement modes
  */
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacterMovement, Log, All);
 
@@ -17,6 +17,8 @@ class MOVEMENTDEMO_API UPlayerMovementComponent : public UCharacterMovementCompo
 	GENERATED_BODY()
 public:
 	UPlayerMovementComponent();
+	
+	//animation functions
 	UFUNCTION(BlueprintPure)
 	float GetSpeed() const { return Velocity.Length(); }
 
@@ -56,17 +58,19 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> ComponentOwner;
 
-	FRotator LastFrameRotation;
-	FRotator SpineRotation;
+	FRotator LastFrameRotation; //used for body leaning
+	FRotator SpineRotation; //used for head looking
 
-	bool bIsClimbing = false;
+	bool bIsClimbing = false; //tracks climbing animation state
 
+	//edge detection for climbing system
 	bool bRightEdgeDetected = false;
 	bool bLeftEdgeDetected = false;
 
-	bool bIsWarping = false;
+	bool bIsWarping = false; //tracks warping state for vaulting -> prevents foot iks from being used while motion warping
 };
 
+//custom movement modes to prevent overlapping issues
 UENUM(BlueprintType)
 enum ECustomMovementMode : uint8
 {

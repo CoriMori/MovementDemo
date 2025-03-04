@@ -9,7 +9,8 @@
 #include "VaultAbility.generated.h"
 
 /**
- * 
+ * Ability to allow players to vault over short objects with motion warping
+ * Multiplayer supported
  */
 UCLASS()
 class MOVEMENTDEMO_API UVaultAbility : public UGameplayAbilityBase

@@ -32,7 +32,7 @@ public:
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 
 	UFUNCTION(BlueprintCallable)
-	FVector2D GetMovementVector() const { return MovementVector; }
+	FVector2D GetMovementVector() const { return MovementVector; } //returning this as a varaiable for animation usage
 
 	virtual void PostInitializeComponents() override;
 

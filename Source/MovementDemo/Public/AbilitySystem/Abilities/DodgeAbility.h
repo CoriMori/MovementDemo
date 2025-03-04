@@ -8,7 +8,8 @@
 #include "DodgeAbility.generated.h"
 
 /**
- * 
+ * Simple ability to play dodge animation
+ * Multiplayer supported
  */
 UCLASS()
 class MOVEMENTDEMO_API UDodgeAbility : public UGameplayAbilityBase
